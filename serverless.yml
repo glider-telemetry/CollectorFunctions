@@ -7,7 +7,7 @@ custom:
   myStage: ${opt:stage, self:provider.stage}
   settings:
     dev:
-      ITEMS_DYNAMODB_TABLE: Fixes-dev
+      ITEMS_DYNAMODB_TABLE: Fixes-dev1
     prod:
       ITEMS_DYNAMODB_TABLE: Fixes-test
 
@@ -37,24 +37,28 @@ functions:
       - http:
           path: item
           method: post
+
   getItem:
     handler: handler.getItem
     events:
       - http:
-          path: item/{itemId}
+          path: item/{trackerID}
           method: get
+
   deleteItem:
     handler: handler.deleteItem
     events:
         - http:
-            path: item/{itemId}
+            path: item/{trackerID}
             method: delete
+
   updateItem:
     handler: handler.updateItem
     events:
       - http:
-          path: item/{itemId}
+          path: item/{trackerID}
           method: put
+
   triggerStream:
     handler: handler.triggerStream
     events:
@@ -74,14 +78,21 @@ resources:
       Type: "AWS::DynamoDB::Table"
       Properties:
         AttributeDefinitions:
-        - AttributeName: "itemId"
+        - AttributeName: "trackerID"
           AttributeType: "S"
+        - AttributeName: "fixTime"
+          AttributeType: "S"
+
         KeySchema:
-        - AttributeName: "itemId"
+        - AttributeName: "trackerID"
           KeyType: "HASH"
+        - AttributeName: "fixTime"
+          KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+
+
         TableName: ${self:custom.settings.${self:custom.myStage}.ITEMS_DYNAMODB_TABLE}
         StreamSpecification:
           StreamViewType: NEW_IMAGE

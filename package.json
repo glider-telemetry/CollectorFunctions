@@ -1,0 +1,17 @@
+{
+  "name": "CollectorFuctions",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Jacques Graells",
+  "license": "",
+  "dependencies": {
+    "serverless": "^1.42.2",
+    "serverless-dynamodb-local": "^0.2.37",
+    "uuid": "^3.3.2"
+  }
+}
