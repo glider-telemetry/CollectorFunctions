@@ -7,7 +7,7 @@ custom:
   myStage: ${opt:stage, self:provider.stage}
   settings:
     dev:
-      ITEMS_DYNAMODB_TABLE: Fixes-dev1
+      ITEMS_DYNAMODB_TABLE: Fixes-dev
     prod:
       ITEMS_DYNAMODB_TABLE: Fixes-test
 
@@ -42,21 +42,21 @@ functions:
     handler: handler.getItem
     events:
       - http:
-          path: item/{trackerID}
+          path: item/{itemID}
           method: get
 
   deleteItem:
     handler: handler.deleteItem
     events:
         - http:
-            path: item/{trackerID}
+            path: item/{itemID}
             method: delete
 
   updateItem:
     handler: handler.updateItem
     events:
       - http:
-          path: item/{trackerID}
+          path: item/{itemID}
           method: put
 
   triggerStream:

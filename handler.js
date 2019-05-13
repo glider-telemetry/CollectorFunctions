@@ -11,14 +11,45 @@ function createResponse(statusCode, message) {
 }
 
 module.exports.saveItem = (event, context, callback) => {
-  const item = JSON.parse(event.body);
-  console.log(item);
-  item.itemId = uuidv1();
+  //This module reads a JSON array and inserts them in the DB
+  //The format of the input is [{...},{...},{....}]
+  //The return is the id of the record
+  var msgType = "";
+  var response1 = "";
+  var response = "";
+  const items = JSON.parse(event.body);
+  console.log(items);
 
-  databaseManager.saveItem(item).then(response => {
+
+  if (event.queryStringParameters && event.queryStringParameters.type) {
+    console.log("Received action: " + event.queryStringParameters.type);
+    msgType = event.queryStringParameters.type;
+  }
+
+  if(msgType == "fix") {
+    async function processArray(array) {
+      response = "[";
+      for (const item of array) {
+        item.itemId = uuidv1();
+        await databaseManager.saveItem(item).then(response1 => {
+        console.log("itemId: "+response1);
+        response += "{"+item.trackerID+","+item.fixTime+"},";
+        //response += response1 + ",";
+        });
+      }
+      response = response.replace(/,$/, ""); //remove the trailing comma
+      response += "]";
+      console.log(response);
+      callback(null, createResponse(200, response));
+    }
+    processArray(items);
+    //console.log("End of JSON array processing");
+  } else {
+    response = "Unkonwn message type";
     console.log(response);
     callback(null, createResponse(200, response));
-  });
+  }
+
 };
 
 module.exports.getItem = (event, context, callback) => {
