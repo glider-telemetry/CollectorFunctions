@@ -1,25 +1,22 @@
 'use strict';
+/*
+Input data in format [{..},{..},{..}]
+Returns [{trackerid,fixtime},{trackerid,fixtime},{trackerid,fixtime}] of successful Fixes
+If input JSOn is incorrect it returns the error
 
-const databaseManager = require('./databaseManager');
-const uuidv1 = require('uuid/v1');
+ */
 
-function createResponse(statusCode, message) {
-  return {
-    statusCode: statusCode,
-    body: JSON.stringify(message)
-  };
-}
+//const uuidv1 = require('uuid/v1');
+const AWS = require('aws-sdk');
+let dynamo = new AWS.DynamoDB.DocumentClient({
+    region: 'ap-southeast-2',
+    //endpoint: 'http://localhost:8000' // comment to deploy in AWS, uncomment for local deployment
+})
 
-module.exports.saveItem = (event, context, callback) => {
-  //This module reads a JSON array and inserts them in the DB
-  //The format of the input is [{...},{...},{....}]
-  //The return is the id of the record
-  var msgType = "";
-  var response1 = "";
-  var response = "";
-  const items = JSON.parse(event.body);
-  console.log(items);
-
+module.exports.saveFix = async (event, context) => {
+  let response;
+  let items;
+  let msgType;
 
   if (event.queryStringParameters && event.queryStringParameters.type) {
     console.log("Received action: " + event.queryStringParameters.type);
@@ -27,67 +24,37 @@ module.exports.saveItem = (event, context, callback) => {
   }
 
   if(msgType == "fix") {
+    try {
+      items = JSON.parse(event.body);
+    } catch(error) {
+        console.log("Error in JSON request:"+error);
+        return { statusCode: 200, body: JSON.stringify('{'+error+'}') };
+    }
+    //console.log(items);
+
     async function processArray(array) {
       response = "[";
       for (const item of array) {
-        item.itemId = uuidv1();
-        await databaseManager.saveItem(item).then(response1 => {
-        console.log("itemId: "+response1);
-        response += "{"+item.trackerID+","+item.fixTime+"},";
-        //response += response1 + ",";
-        });
+        try {
+          //item.itemId = uuidv1();
+          item.insertTime = Math.floor(new Date() / 1000);
+          console.log("Fix to be insterted:"+JSON.stringify(item));
+          const params = {TableName: process.env.ITEMS_DYNAMODB_TABLE, Item: item};
+          const data = await dynamo.put(params).promise();
+          response += "{"+item.trackerID+","+item.fixTime+"},";
+        } catch (error) {
+          console.log("Error writing: "+ "{"+item.trackerID+","+item.fixTime+"} :",error);
+        }
       }
-      response = response.replace(/,$/, ""); //remove the trailing comma
-      response += "]";
-      console.log(response);
-      callback(null, createResponse(200, response));
     }
-    processArray(items);
-    //console.log("End of JSON array processing");
+
+    await processArray(items);
+    response = response.replace(/,$/, ""); //remove the trailing comma
+    response += "]";
+    await console.log(response);
   } else {
-    response = "Unkonwn message type";
+    response  = "Invalid request Type"
     console.log(response);
-    callback(null, createResponse(200, response));
   }
-
-};
-
-module.exports.getItem = (event, context, callback) => {
-  const itemId = event.pathParameters.itemId;
-
-  databaseManager.getItem(itemId).then(response => {
-    console.log(response);
-    callback(null, createResponse(200, response));
-  });
-};
-
-module.exports.deleteItem = (event, context, callback) => {
-  const itemId = event.pathParameters.itemId;
-
-  databaseManager.deleteItem(itemId).then(response => {
-    callback(null, createResponse(200, 'Item was deleted'));
-  });
-};
-
-module.exports.updateItem = (event, context, callback) => {
-  const itemId = event.pathParameters.itemId;
-
-  const body = JSON.parse(event.body);
-  const paramName = body.paramName;
-  const paramValue = body.paramValue;
-
-  databaseManager.updateItem(itemId, paramName, paramValue).then(response => {
-    console.log(response);
-    callback(null, createResponse(200, response));
-  });
-};
-
-module.exports.triggerStream = (event, context, callback) => {
-  console.log('trigger stream was called');
-
-  const eventData = event.Records[0];
-  //console.log(eventData);
-
-  console.log(eventData.dynamodb.NewImage);
-  callback(null, null);
+  return { statusCode: 200, body: JSON.stringify(response) };
 };
