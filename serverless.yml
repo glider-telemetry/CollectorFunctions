@@ -9,11 +9,14 @@ custom:
   myStage: ${opt:stage, self:provider.stage}
   settings:
     dev:
-      ITEMS_DYNAMODB_TABLE: Fixes-dev
+      ITEMS_FIXES_TABLE: Fixes-dev
+      ITEMS_DEVICES_TABLE: Devices-dev
     prod:
-      ITEMS_DYNAMODB_TABLE: Fixes-test
+      ITEMS_FIXES_TABLE: Fixes-test
+      ITEMS_DEVICES_TABLE: Devices-test
     devjg:
-      ITEMS_DYNAMODB_TABLE: Fixes-dev-jg
+      ITEMS_FIXES_TABLE: Fixes-dev-jg
+      ITEMS_DEVICES_TABLE: Devices-dev-jg
 
 provider:
   name: aws
@@ -34,20 +37,26 @@ provider:
         - "dynamodb:DeleteItem"
         - "dynamodb:ListStreams"
       Resource:
-        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.${self:custom.myStage}.ITEMS_DYNAMODB_TABLE}"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.${self:custom.myStage}.ITEMS_FIXES_TABLE}"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.${self:custom.myStage}.ITEMS_DEVICES_TABLE}"
 
 functions:
   saveFix:
     handler: handler.saveFix
     events:
       - http:
-          path: item
+          path: fix
           method: post
-
+  saveDevice:
+    handler: handler.saveDevice
+    events:
+      - http:
+          path: device
+          method: post
 
 resources:
   Resources:
-    FizesTable:
+    FixesTable:
       Type: "AWS::DynamoDB::Table"
       Properties:
         BillingMode: "PAY_PER_REQUEST"
@@ -73,7 +82,34 @@ resources:
           Projection:
             ProjectionType: "KEYS_ONLY"
 
-        TableName: ${self:custom.settings.${self:custom.myStage}.ITEMS_DYNAMODB_TABLE}
+        TableName: ${self:custom.settings.${self:custom.myStage}.ITEMS_FIXES_TABLE}
         #TableName: Fixes-dev
-        StreamSpecification:
-          StreamViewType: "NEW_IMAGE"
+        #StreamSpecification:
+        #  StreamViewType: "NEW_IMAGE"
+
+    DevicesTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        BillingMode: "PAY_PER_REQUEST"
+        AttributeDefinitions:
+        - AttributeName: "trackerID"
+          AttributeType: "S"
+        - AttributeName: "gliderID"
+          AttributeType: "S"
+
+        KeySchema:
+        - AttributeName: "trackerID"
+          KeyType: "HASH"
+
+        GlobalSecondaryIndexes:
+        - IndexName: "gliderID-index"
+          KeySchema:
+            - AttributeName: "gliderID"
+              KeyType: "HASH"
+          Projection:
+            ProjectionType: "KEYS_ONLY"
+
+        TableName: ${self:custom.settings.${self:custom.myStage}.ITEMS_DEVICES_TABLE}
+        #TableName: Fixes-dev
+        #StreamSpecification:
+        #  StreamViewType: "NEW_IMAGE"

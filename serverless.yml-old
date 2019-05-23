@@ -1,0 +1,79 @@
+service: CollectorFunctions
+
+plugins:
+  - serverless-dynamodb-local
+  - serverless-offline
+  - serverless-plugin-include-dependencies
+
+custom:
+  myStage: ${opt:stage, self:provider.stage}
+  settings:
+    dev:
+      ITEMS_DYNAMODB_TABLE: Fixes-dev
+    prod:
+      ITEMS_DYNAMODB_TABLE: Fixes-test
+    devjg:
+      ITEMS_DYNAMODB_TABLE: Fixes-dev-jg
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  #runtime: nodejs8.10
+  profile: agtjgdev
+  region: ap-southeast-2
+  #stage: dev
+  environment: ${self:custom.settings.${self:custom.myStage}}
+  timeout: 30
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:ListStreams"
+      Resource:
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.${self:custom.myStage}.ITEMS_DYNAMODB_TABLE}"
+
+functions:
+  saveFix:
+    handler: handler.saveFix
+    events:
+      - http:
+          path: item
+          method: post
+
+
+resources:
+  Resources:
+    FizesTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        BillingMode: "PAY_PER_REQUEST"
+        AttributeDefinitions:
+        - AttributeName: "trackerID"
+          AttributeType: "S"
+        - AttributeName: "fixTime"
+          AttributeType: "N"
+        - AttributeName: "insertTime"
+          AttributeType: "N"
+
+        KeySchema:
+        - AttributeName: "trackerID"
+          KeyType: "HASH"
+        - AttributeName: "fixTime"
+          KeyType: "RANGE"
+
+        GlobalSecondaryIndexes:
+        - IndexName: "insertTime-index"
+          KeySchema:
+            - AttributeName: "insertTime"
+              KeyType: "HASH"
+          Projection:
+            ProjectionType: "KEYS_ONLY"
+
+        TableName: ${self:custom.settings.${self:custom.myStage}.ITEMS_DYNAMODB_TABLE}
+        #TableName: Fixes-dev
+        StreamSpecification:
+          StreamViewType: "NEW_IMAGE"
