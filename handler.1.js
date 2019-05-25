@@ -26,30 +26,41 @@ module.exports.saveDevice = async (event, context) => {
     return { statusCode: 200, body: JSON.stringify('{' + error + '}') };
   }
 
-  //console.log(item);
+  console.log(item);
 
-
+  
 
   try {
+    //item.itemId = uuidv1();
     item.insertTime = Math.floor(new Date() / 1000);
-    let params = { TableName: process.env.ITEMS_DEVICES_TABLE, Item: item };
-    let data = await dynamo.put(params).promise();
-    params = {
-      TableName: process.env.ITEMS_DEVICES_TABLE,
-      KeyConditionExpression: "trackerID = :ti",
-      ExpressionAttributeValues: {":ti": "123456ABC"}
-    };
-    response = await dynamo.query(params).promise();
-    console.log(response);
-    
-    return { statusCode: 200, body: JSON.stringify(response) };
-    
+    //console.log('Fix to be insterted:' + JSON.stringify(item));
+    const params = { TableName: process.env.ITEMS_DEVICES_TABLE, Item: item };
+    const data = await dynamo.put(params).promise();
+    response = '{' + item.trackerID + '}';
   } catch (error) {
       console.log('Error writing: ' + '{' + item.trackerID + '} :', error);
       response = '{' + error + '}';
-      return { statusCode: 200, body: JSON.stringify(response) };
   }
 
+
+  let params = {
+    TableName: process.env.ITEMS_DEVICES_TABLE,
+    KeyConditionExpression: "trackerID = :ti",
+    ExpressionAttributeValues: {":ti": "123456ABC"}
+    };
+
+    try {
+      let data;
+      data = await dynamo.query(params).promise();
+      console.log(data);
+    } catch (error) {
+          console.error("Unable to read item. Error JSON:", JSON.stringify(error, null, 2));
+  }
+
+  console.log(data);
+
+
+  return { statusCode: 200, body: JSON.stringify('response') };
 };
 
 
