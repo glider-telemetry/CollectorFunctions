@@ -11,17 +11,22 @@ custom:
     dev:
       ITEMS_FIXES_TABLE: Fixes-dev
       ITEMS_DEVICES_TABLE: Devices-dev
+      ITEMS_PILOTS_TABLE: Pilots-dev
     prod:
       ITEMS_FIXES_TABLE: Fixes-test
       ITEMS_DEVICES_TABLE: Devices-test
+      ITEMS_PILOTS_TABLE: Pilots-test
     devjg:
       ITEMS_FIXES_TABLE: Fixes-dev-jg
       ITEMS_DEVICES_TABLE: Devices-dev-jg
+      ITEMS_PILOTS_TABLE: Pilots-dev-jg
+
+  serverless-offline:
+    port: 3001
 
 provider:
   name: aws
   runtime: nodejs10.x
-  #runtime: nodejs8.10
   profile: agtjgdev
   region: ap-southeast-2
   #stage: dev
@@ -35,10 +40,12 @@ provider:
         - "dynamodb:PutItem"
         - "dynamodb:UpdateItem"
         - "dynamodb:DeleteItem"
-        - "dynamodb:ListStreams"
+        - "dynamodb:Query"
+        - "dynamodb:Scan"
       Resource:
         - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.${self:custom.myStage}.ITEMS_FIXES_TABLE}"
         - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.${self:custom.myStage}.ITEMS_DEVICES_TABLE}"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.${self:custom.myStage}.ITEMS_PILOTS_TABLE}"
 
 functions:
   saveFix:
@@ -54,62 +61,66 @@ functions:
           path: device
           method: post
 
-resources:
-  Resources:
-    FixesTable:
-      Type: "AWS::DynamoDB::Table"
-      Properties:
-        BillingMode: "PAY_PER_REQUEST"
-        AttributeDefinitions:
-        - AttributeName: "trackerID"
-          AttributeType: "S"
-        - AttributeName: "fixTime"
-          AttributeType: "N"
-        - AttributeName: "insertTime"
-          AttributeType: "N"
+# resources:
+#   Resources:
+#     FixesTable:
+#       Type: "AWS::DynamoDB::Table"
+#       Properties:
+#         BillingMode: "PAY_PER_REQUEST"
+#         AttributeDefinitions:
+#         - AttributeName: "trackerID"
+#           AttributeType: "S"
+#         - AttributeName: "fixTime"
+#           AttributeType: "N"
+#         - AttributeName: "insertTime"
+#           AttributeType: "N"
 
-        KeySchema:
-        - AttributeName: "trackerID"
-          KeyType: "HASH"
-        - AttributeName: "fixTime"
-          KeyType: "RANGE"
+#         KeySchema:
+#         - AttributeName: "trackerID"
+#           KeyType: "HASH"
+#         - AttributeName: "fixTime"
+#           KeyType: "RANGE"
 
-        GlobalSecondaryIndexes:
-        - IndexName: "insertTime-index"
-          KeySchema:
-            - AttributeName: "insertTime"
-              KeyType: "HASH"
-          Projection:
-            ProjectionType: "KEYS_ONLY"
+#         GlobalSecondaryIndexes:
+#         - IndexName: "insertTime-index"
+#           KeySchema:
+#             - AttributeName: "insertTime"
+#               KeyType: "HASH"
+#           Projection:
+#             ProjectionType: "KEYS_ONLY"
 
-        TableName: ${self:custom.settings.${self:custom.myStage}.ITEMS_FIXES_TABLE}
-        #TableName: Fixes-dev
-        #StreamSpecification:
-        #  StreamViewType: "NEW_IMAGE"
+#         TableName: ${self:custom.settings.${self:custom.myStage}.ITEMS_FIXES_TABLE}
+#         #TableName: Fixes-dev
+#         #StreamSpecification:
+#         #  StreamViewType: "NEW_IMAGE"
 
-    DevicesTable:
-      Type: "AWS::DynamoDB::Table"
-      Properties:
-        BillingMode: "PAY_PER_REQUEST"
-        AttributeDefinitions:
-        - AttributeName: "trackerID"
-          AttributeType: "S"
-        - AttributeName: "gliderID"
-          AttributeType: "S"
+#     DevicesTable:
+#       Type: "AWS::DynamoDB::Table"
+#       Properties:
+#         BillingMode: "PAY_PER_REQUEST"
+#         AttributeDefinitions:
+#         - AttributeName: "trackerID"
+#           AttributeType: "S"
+#         - AttributeName: "lastUpdate"
+#           AttributeType: "N"
+#         - AttributeName: "gliderID"
+#           AttributeType: "S"
 
-        KeySchema:
-        - AttributeName: "trackerID"
-          KeyType: "HASH"
+#         KeySchema:
+#         - AttributeName: "trackerID"
+#           KeyType: "HASH"
+#         - AttributeName: "lastUpdate"
+#           KeyType: "RANGE"
 
-        GlobalSecondaryIndexes:
-        - IndexName: "gliderID-index"
-          KeySchema:
-            - AttributeName: "gliderID"
-              KeyType: "HASH"
-          Projection:
-            ProjectionType: "KEYS_ONLY"
+#         GlobalSecondaryIndexes:
+#         - IndexName: "gliderID-index"
+#           KeySchema:
+#             - AttributeName: "gliderID"
+#               KeyType: "HASH"
+#           Projection:
+#             ProjectionType: "KEYS_ONLY"
 
-        TableName: ${self:custom.settings.${self:custom.myStage}.ITEMS_DEVICES_TABLE}
-        #TableName: Fixes-dev
-        #StreamSpecification:
-        #  StreamViewType: "NEW_IMAGE"
+#         TableName: ${self:custom.settings.${self:custom.myStage}.ITEMS_DEVICES_TABLE}
+#         #TableName: Fixes-dev
+#         #StreamSpecification:
+#         #  StreamViewType: "NEW_IMAGE"
